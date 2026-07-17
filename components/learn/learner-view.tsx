@@ -20,11 +20,13 @@ export function LearnerView({
   completedIds,
   enrolled,
   isAuthed,
+  preview = false,
 }: {
   course: CourseTree;
   completedIds: string[];
   enrolled: boolean;
   isAuthed: boolean;
+  preview?: boolean;
 }) {
   const router = useRouter();
   const [completed, setCompleted] = useState<Set<string>>(
@@ -37,9 +39,7 @@ export function LearnerView({
     () => course.units.flatMap((u) => u.chapters),
     [course.units],
   );
-  const [activeId, setActiveId] = useState<string | null>(
-    flat[0]?.id ?? null,
-  );
+  const [activeId, setActiveId] = useState<string | null>(flat[0]?.id ?? null);
 
   const active: Chapter | null =
     flat.find((c) => c.id === activeId) ?? flat[0] ?? null;
@@ -140,6 +140,13 @@ export function LearnerView({
       {/* main */}
       <main className="overflow-y-auto">
         <div className="mx-auto max-w-3xl px-6 py-6">
+          {preview && (
+            <div className="mb-4 flex items-center gap-2 border border-dashed p-3 text-sm text-muted-foreground">
+              <Badge variant="secondary">Preview</Badge>
+              You&apos;re viewing the unpublished draft. Learners see the last
+              published version.
+            </div>
+          )}
           {!active ? (
             <div className="rounded-none border border-dashed p-12 text-center text-muted-foreground">
               This course has no chapters yet.
@@ -153,34 +160,38 @@ export function LearnerView({
                   </p>
                   <h1 className="font-heading text-2xl">{active.title}</h1>
                 </div>
-                <div className="flex items-center gap-2">
-                  {!enrolled && isAuthed && (
+                {!preview && (
+                  <div className="flex items-center gap-2">
+                    {!enrolled && isAuthed && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleEnroll}
+                        disabled={pending}
+                      >
+                        Enroll
+                      </Button>
+                    )}
+                    {!isAuthed && (
+                      <Link href="/login">
+                        <Button variant="outline" size="sm">
+                          Sign in to enroll
+                        </Button>
+                      </Link>
+                    )}
                     <Button
-                      variant="outline"
                       size="sm"
-                      onClick={handleEnroll}
+                      variant={
+                        completed.has(active.id) ? "secondary" : "default"
+                      }
+                      onClick={toggleComplete}
                       disabled={pending}
                     >
-                      Enroll
+                      <Check className="size-4" />
+                      {completed.has(active.id) ? "Completed" : "Mark complete"}
                     </Button>
-                  )}
-                  {!isAuthed && (
-                    <Link href="/login">
-                      <Button variant="outline" size="sm">
-                        Sign in to enroll
-                      </Button>
-                    </Link>
-                  )}
-                  <Button
-                    size="sm"
-                    variant={completed.has(active.id) ? "secondary" : "default"}
-                    onClick={toggleComplete}
-                    disabled={pending}
-                  >
-                    <Check className="size-4" />
-                    {completed.has(active.id) ? "Completed" : "Mark complete"}
-                  </Button>
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* video */}
@@ -263,9 +274,10 @@ function ComingSoon({ feature }: { feature: string }) {
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-        <Badge variant="secondary">Phase 3</Badge>
+        {/* <Badge variant="secondary">Phase 3</Badge> */}
+        <Badge variant="secondary">Comming Soon</Badge>
         <p className="text-sm text-muted-foreground">
-          {feature} will be generated from the video transcript.
+          {feature} about the video.
         </p>
       </CardContent>
     </Card>

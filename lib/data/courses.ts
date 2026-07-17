@@ -1,6 +1,11 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import type { CourseTree, CourseCard, UnitWithChapters } from "@/lib/types";
+import type {
+  CourseTree,
+  CourseCard,
+  UnitWithChapters,
+  PublishedTree,
+} from "@/lib/types";
 
 const MAX_COURSES = 3;
 export { MAX_COURSES };
@@ -38,20 +43,65 @@ export async function getCourseTree(courseId: string): Promise<CourseTree | null
   } as CourseTree;
 }
 
+/** Count chapters from a normalized nested select (author-side). */
 function chapterCount(units: unknown): number {
   const arr = (units ?? []) as { chapters?: unknown[] }[];
   return arr.reduce((n, u) => n + (u.chapters?.length ?? 0), 0);
 }
 
-/** Published courses for the public grid. */
+/** Count chapters from a published snapshot (learner-side). */
+function snapshotChapterCount(tree: unknown): number {
+  const t = tree as PublishedTree | null;
+  return (t?.units ?? []).reduce((n, u) => n + (u.chapters?.length ?? 0), 0);
+}
+
+/** A published course tree from the frozen snapshot (learner-facing). */
+export async function getPublishedCourse(
+  courseId: string,
+): Promise<CourseTree | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("courses")
+    .select(`*, author:profiles(display_name)`)
+    .eq("id", courseId)
+    .eq("status", "published")
+    .maybeSingle();
+
+  if (!data || !data.published_tree) return null;
+  const tree = data.published_tree as PublishedTree;
+
+  return {
+    ...data,
+    author_name: authorName(data.author),
+    units: tree.units.map((u) => ({
+      id: u.id,
+      course_id: courseId,
+      title: u.title,
+      description: u.description,
+      position: u.position,
+      chapters: u.chapters.map((c) => ({
+        id: c.id,
+        unit_id: u.id,
+        title: c.title,
+        description: c.description,
+        youtube_url: c.youtube_url,
+        youtube_video_id: c.youtube_video_id,
+        position: c.position,
+        ai_status: "ready" as const,
+        ai_error: null,
+      })),
+    })),
+  } as CourseTree;
+}
+
+/** Published courses for the public grid (counts from the snapshot). */
 export async function getPublishedCourses(): Promise<CourseCard[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("courses")
     .select(
-      `id, title, description, subject, status, cover_url,
+      `id, title, description, subject, status, cover_url, published_tree,
        author:profiles(display_name),
-       units(id, chapters(id)),
        enrollments(count)`,
     )
     .eq("status", "published")
@@ -69,7 +119,7 @@ export async function getPublishedCourses(): Promise<CourseCard[]> {
       status: c.status,
       cover_url: c.cover_url,
       author_name: authorName(c.author),
-      chapter_count: chapterCount(c.units),
+      chapter_count: snapshotChapterCount(c.published_tree),
       enrollment_count: enr?.[0]?.count ?? 0,
     };
   });
@@ -81,7 +131,7 @@ export async function getMyCourses(userId: string): Promise<CourseCard[]> {
   const { data, error } = await supabase
     .from("courses")
     .select(
-      `id, title, description, subject, status, cover_url,
+      `id, title, description, subject, status, cover_url, has_unpublished_changes,
        author:profiles(display_name),
        units(id, chapters(id)),
        enrollments(count)`,
@@ -103,6 +153,7 @@ export async function getMyCourses(userId: string): Promise<CourseCard[]> {
       author_name: authorName(c.author),
       chapter_count: chapterCount(c.units),
       enrollment_count: enr?.[0]?.count ?? 0,
+      has_unpublished_changes: c.has_unpublished_changes ?? false,
     };
   });
 }
@@ -123,8 +174,8 @@ export async function getEnrolledCourses(
       .from("enrollments")
       .select(
         `course:courses(id, title, description, subject, status, cover_url,
-          author:profiles(display_name),
-          units(id, chapters(id)))`,
+          published_tree,
+          author:profiles(display_name))`,
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false }),
@@ -143,11 +194,11 @@ export async function getEnrolledCourses(
         status: CourseCard["status"];
         cover_url: string | null;
         author: unknown;
-        units: { id: string; chapters: { id: string }[] }[];
+        published_tree: PublishedTree | null;
       } | null;
       if (!c) return null;
 
-      const chapterIds = (c.units ?? []).flatMap((u) =>
+      const chapterIds = (c.published_tree?.units ?? []).flatMap((u) =>
         (u.chapters ?? []).map((ch) => ch.id),
       );
       const total = chapterIds.length;

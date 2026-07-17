@@ -1,0 +1,212 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
+import { extractYoutubeId, courseSchema } from "@/lib/schemas/course";
+import { getCourseTree } from "@/lib/data/courses";
+import type { CourseTree, PublishedTree } from "@/lib/types";
+
+export interface SaveChapterInput {
+  id: string;
+  title: string;
+  description: string;
+  youtube_url: string | null;
+}
+export interface SaveUnitInput {
+  id: string;
+  title: string;
+  description: string;
+  chapters: SaveChapterInput[];
+}
+export interface SaveCourseTreeInput {
+  meta: { title: string; description: string; subject: string };
+  units: SaveUnitInput[];
+}
+
+/**
+ * Bulk-save the entire builder tree in one call. New units/chapters carry
+ * client-generated UUIDs, so this is a pure upsert + delete-missing. If a
+ * chapter's video changes while it was already AI-`ready`, it is marked `stale`
+ * so the next Generate-AI pass reprocesses just that chapter.
+ */
+export async function saveCourseTree(
+  courseId: string,
+  input: SaveCourseTreeInput,
+) {
+  await requireUser();
+  const supabase = await createClient();
+
+  const meta = courseSchema.safeParse(input.meta);
+  if (!meta.success) {
+    return { ok: false as const, error: meta.error.issues[0].message };
+  }
+
+  const { data: courseRow } = await supabase
+    .from("courses")
+    .select("status")
+    .eq("id", courseId)
+    .single();
+  const isPublished = courseRow?.status === "published";
+
+  // Existing rows (to detect video changes + deletions).
+  const { data: existingUnits } = await supabase
+    .from("units")
+    .select("id")
+    .eq("course_id", courseId);
+  const existingUnitIds = (existingUnits ?? []).map((u) => u.id);
+
+  const { data: existingChapters } = existingUnitIds.length
+    ? await supabase
+        .from("chapters")
+        .select("id, youtube_video_id, ai_status")
+        .in("unit_id", existingUnitIds)
+    : { data: [] as { id: string; youtube_video_id: string | null; ai_status: string }[] };
+  const existingChapterMap = new Map(
+    (existingChapters ?? []).map((c) => [c.id, c]),
+  );
+
+  // Update course meta (+ mark dirty-since-publish).
+  const { error: metaErr } = await supabase
+    .from("courses")
+    .update({
+      title: meta.data.title,
+      description: meta.data.description,
+      subject: meta.data.subject,
+      ...(isPublished ? { has_unpublished_changes: true } : {}),
+    })
+    .eq("id", courseId);
+  if (metaErr) return { ok: false as const, error: metaErr.message };
+
+  // Upsert units.
+  const unitRows = input.units.map((u, i) => ({
+    id: u.id,
+    course_id: courseId,
+    title: u.title,
+    description: u.description ?? "",
+    position: i,
+  }));
+  if (unitRows.length) {
+    const { error } = await supabase.from("units").upsert(unitRows);
+    if (error) return { ok: false as const, error: error.message };
+  }
+
+  // Upsert chapters.
+  const chapterRows = input.units.flatMap((u) =>
+    u.chapters.map((c, j) => {
+      const videoId = c.youtube_url ? extractYoutubeId(c.youtube_url) : null;
+      const prev = existingChapterMap.get(c.id);
+      const videoChanged = prev && prev.youtube_video_id !== videoId;
+      const markStale = videoChanged && prev?.ai_status === "ready";
+      return {
+        id: c.id,
+        unit_id: u.id,
+        title: c.title,
+        description: c.description ?? "",
+        youtube_url: c.youtube_url || null,
+        youtube_video_id: videoId,
+        position: j,
+        ...(markStale ? { ai_status: "stale" } : {}),
+      };
+    }),
+  );
+  if (chapterRows.length) {
+    const { error } = await supabase.from("chapters").upsert(chapterRows);
+    if (error) return { ok: false as const, error: error.message };
+  }
+
+  // Delete rows the author removed.
+  const keepUnitIds = new Set(input.units.map((u) => u.id));
+  const keepChapterIds = new Set(
+    input.units.flatMap((u) => u.chapters.map((c) => c.id)),
+  );
+  const unitsToDelete = existingUnitIds.filter((id) => !keepUnitIds.has(id));
+  const chaptersToDelete = (existingChapters ?? [])
+    .map((c) => c.id)
+    .filter((id) => !keepChapterIds.has(id));
+
+  if (chaptersToDelete.length) {
+    await supabase.from("chapters").delete().in("id", chaptersToDelete);
+  }
+  if (unitsToDelete.length) {
+    await supabase.from("units").delete().in("id", unitsToDelete);
+  }
+
+  revalidatePath(`/dashboard/courses/${courseId}/edit`);
+  revalidatePath("/dashboard");
+  return { ok: true as const, savedAt: new Date().toISOString() };
+}
+
+/** Serialize the current draft into a learner-facing snapshot (no quiz answers). */
+function serializePublishedTree(tree: CourseTree): PublishedTree {
+  return {
+    units: tree.units.map((u, i) => ({
+      id: u.id,
+      title: u.title,
+      description: u.description,
+      position: i,
+      chapters: u.chapters.map((c, j) => ({
+        id: c.id,
+        title: c.title,
+        description: c.description,
+        youtube_url: c.youtube_url,
+        youtube_video_id: c.youtube_video_id,
+        position: j,
+        // Phase 3: summary + quiz (questions/options only) + reviewed flags
+      })),
+    })),
+  };
+}
+
+/**
+ * Publish (or re-publish) a course: freeze the current draft into
+ * `published_tree`. Backs both the "Publish" and "Publish changes" buttons.
+ */
+export async function publishCourse(courseId: string) {
+  const user = await requireUser();
+  const tree = await getCourseTree(courseId);
+  if (!tree) return { ok: false as const, error: "Course not found." };
+  if (tree.author_id !== user.id) {
+    return { ok: false as const, error: "Not your course." };
+  }
+  if (!tree.title.trim()) {
+    return { ok: false as const, error: "Add a course title first." };
+  }
+  const chapterCount = tree.units.reduce((n, u) => n + u.chapters.length, 0);
+  if (chapterCount === 0) {
+    return { ok: false as const, error: "Add at least one chapter first." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("courses")
+    .update({
+      status: "published",
+      published_tree: serializePublishedTree(tree),
+      published_at: new Date().toISOString(),
+      has_unpublished_changes: false,
+    })
+    .eq("id", courseId);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/courses");
+  revalidatePath(`/courses/${courseId}`);
+  revalidatePath(`/dashboard/courses/${courseId}/edit`);
+  revalidatePath("/dashboard");
+  return { ok: true as const };
+}
+
+export async function unpublishCourse(courseId: string) {
+  await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("courses")
+    .update({ status: "draft" })
+    .eq("id", courseId);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/courses");
+  revalidatePath(`/courses/${courseId}`);
+  revalidatePath(`/dashboard/courses/${courseId}/edit`);
+  revalidatePath("/dashboard");
+  return { ok: true as const };
+}

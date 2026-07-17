@@ -11,6 +11,8 @@ export interface Course {
   cover_url: string | null;
   created_at: string;
   updated_at: string;
+  published_at?: string | null;
+  has_unpublished_changes?: boolean;
 }
 
 export interface Unit {
@@ -61,4 +63,28 @@ export interface CourseCard {
   author_name: string | null;
   chapter_count: number;
   enrollment_count?: number;
+  has_unpublished_changes?: boolean;
+}
+
+// ── Published snapshot (courses.published_tree) — learner-facing, no answers ──
+export interface PublishedChapter {
+  id: string;
+  title: string;
+  description: string;
+  youtube_url: string | null;
+  youtube_video_id: string | null;
+  position: number;
+  // Phase 3 adds: summary, quiz (questions/options only), reviewed_by_author
+}
+
+export interface PublishedUnit {
+  id: string;
+  title: string;
+  description: string;
+  position: number;
+  chapters: PublishedChapter[];
+}
+
+export interface PublishedTree {
+  units: PublishedUnit[];
 }

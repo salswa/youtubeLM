@@ -119,13 +119,21 @@ export default async function DashboardPage() {
                           {c.enrollment_count ?? 0} learners
                         </p>
                       </div>
-                      <Badge
-                        variant={
-                          c.status === "published" ? "default" : "secondary"
-                        }
-                      >
-                        {c.status}
-                      </Badge>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <Badge
+                          variant={
+                            c.status === "published" ? "default" : "secondary"
+                          }
+                        >
+                          {c.status}
+                        </Badge>
+                        {c.status === "published" &&
+                          c.has_unpublished_changes && (
+                            <span className="text-[11px] text-amber-600">
+                              unpublished changes
+                            </span>
+                          )}
+                      </div>
                     </div>
                     <div className="mt-3 flex gap-2">
                       <Link
