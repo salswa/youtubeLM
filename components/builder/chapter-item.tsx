@@ -6,25 +6,35 @@ import { GripVertical, Trash2, Play } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AiStatusBadge } from "@/components/builder/ai-status-badge";
+import { ChapterAiDialog } from "@/components/builder/chapter-ai-dialog";
 import { youtubeThumb } from "@/lib/youtube";
-import type { Chapter } from "@/lib/types";
+import type { Chapter, AiStatus } from "@/lib/types";
 
 export function ChapterItem({
   chapter,
   onTitleChange,
   onVideoChange,
   onDelete,
+  onAiStatusChange,
 }: {
   chapter: Chapter;
   onTitleChange: (id: string, title: string) => void;
   onVideoChange: (id: string, url: string) => void;
   onDelete: (id: string) => void;
+  onAiStatusChange: (id: string, status: AiStatus) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({
-      id: chapter.id,
-      data: { type: "chapter", unitId: chapter.unit_id },
-    });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: chapter.id,
+    data: { type: "chapter", unitId: chapter.unit_id },
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -38,7 +48,7 @@ export function ChapterItem({
       style={style}
       className="flex items-start gap-3 border-t bg-background p-3"
     >
-      <button
+      <Button
         type="button"
         className="mt-1 cursor-grab text-muted-foreground/60 hover:text-foreground"
         {...attributes}
@@ -46,7 +56,7 @@ export function ChapterItem({
         aria-label="Drag chapter"
       >
         <GripVertical className="size-4" />
-      </button>
+      </Button>
 
       {/* thumbnail */}
       <div className="grid aspect-video w-24 shrink-0 place-items-center overflow-hidden rounded-none border bg-muted">
@@ -85,9 +95,16 @@ export function ChapterItem({
               No video
             </Badge>
           )}
+          <span className="shrink-0">
+            <AiStatusBadge status={chapter.ai_status} />
+          </span>
         </div>
       </div>
 
+      <ChapterAiDialog
+        chapterId={chapter.id}
+        onAiStatusChange={onAiStatusChange}
+      />
       <Button
         type="button"
         variant="ghost"

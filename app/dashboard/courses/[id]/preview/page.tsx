@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getCourseTree, getCompletedChapterIds } from "@/lib/data/courses";
+import { getDraftLearnerCourse } from "@/lib/data/learner";
 import { LearnerView } from "@/components/learn/learner-view";
 
 export const dynamic = "force-dynamic";
@@ -13,9 +14,12 @@ export default async function CoursePreviewPage({
   const user = await requireUser();
   const { id } = await params;
 
-  const course = await getCourseTree(id);
+  const tree = await getCourseTree(id);
+  if (!tree) notFound();
+  if (tree.author_id !== user.id) redirect("/dashboard");
+
+  const course = await getDraftLearnerCourse(id);
   if (!course) notFound();
-  if (course.author_id !== user.id) redirect("/dashboard");
 
   const chapterIds = course.units.flatMap((u) =>
     u.chapters.map((c) => c.id),

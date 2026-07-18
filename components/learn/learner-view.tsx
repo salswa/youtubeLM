@@ -4,16 +4,17 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Play, CircleCheck, Circle } from "lucide-react";
+import { Check, Play, CircleCheck, Circle, Trophy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
 import { YouTubeEmbed } from "@/components/player/youtube-embed";
+import { QuizRunner } from "@/components/learn/quiz-runner";
+import { ChatPanel } from "@/components/learn/chat-panel";
 import { enrollInCourse, setChapterComplete } from "@/lib/actions/enrollment";
-import type { CourseTree, Chapter } from "@/lib/types";
+import type { LearnerCourse, LearnerChapter } from "@/lib/types";
 
 export function LearnerView({
   course,
@@ -22,7 +23,7 @@ export function LearnerView({
   isAuthed,
   preview = false,
 }: {
-  course: CourseTree;
+  course: LearnerCourse;
   completedIds: string[];
   enrolled: boolean;
   isAuthed: boolean;
@@ -34,16 +35,15 @@ export function LearnerView({
   );
   const [pending, startTransition] = useTransition();
 
-  // flat chapter list for prev/next + first-chapter default
   const flat = useMemo(
     () => course.units.flatMap((u) => u.chapters),
     [course.units],
   );
-  const [activeId, setActiveId] = useState<string | null>(flat[0]?.id ?? null);
+  // view is a chapter id, or "final" for the final course quiz
+  const [view, setView] = useState<string>(flat[0]?.id ?? "final");
 
-  const active: Chapter | null =
-    flat.find((c) => c.id === activeId) ?? flat[0] ?? null;
-  const activeIndex = flat.findIndex((c) => c.id === active?.id);
+  const active: LearnerChapter | null =
+    view === "final" ? null : flat.find((c) => c.id === view) ?? flat[0] ?? null;
 
   const total = flat.length;
   const doneCount = flat.filter((c) => completed.has(c.id)).length;
@@ -76,7 +76,7 @@ export function LearnerView({
       const res = await setChapterComplete(active.id, !isDone, course.id);
       if (!res.ok) {
         toast.error(res.error);
-        setCompleted(completed); // revert
+        setCompleted(completed);
       }
     });
   }
@@ -110,12 +110,12 @@ export function LearnerView({
               <ul>
                 {unit.chapters.map((ch) => {
                   const done = completed.has(ch.id);
-                  const isActive = ch.id === active?.id;
+                  const isActive = ch.id === view;
                   return (
                     <li key={ch.id}>
                       <button
-                        onClick={() => setActiveId(ch.id)}
-                        className={`flex w-full items-center gap-2 rounded-none px-2 py-2 text-left text-sm transition-colors ${
+                        onClick={() => setView(ch.id)}
+                        className={`flex w-full items-center gap-2 px-2 py-2 text-left text-sm transition-colors ${
                           isActive
                             ? "bg-primary/10 font-medium text-primary"
                             : "hover:bg-muted"
@@ -134,6 +134,19 @@ export function LearnerView({
               </ul>
             </div>
           ))}
+
+          {course.final_quiz && (
+            <button
+              onClick={() => setView("final")}
+              className={`flex w-full items-center gap-2 px-2 py-2 text-left text-sm font-medium transition-colors ${
+                view === "final"
+                  ? "bg-primary/10 text-primary"
+                  : "text-primary hover:bg-muted"
+              }`}
+            >
+              <Trophy className="size-4 shrink-0" /> Final course quiz
+            </button>
+          )}
         </nav>
       </aside>
 
@@ -147,17 +160,26 @@ export function LearnerView({
               published version.
             </div>
           )}
-          {!active ? (
-            <div className="rounded-none border border-dashed p-12 text-center text-muted-foreground">
+
+          {view === "final" && course.final_quiz ? (
+            <>
+              <h1 className="font-heading text-2xl">Final course quiz</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {course.final_quiz.questions.length} questions across the whole
+                course.
+              </p>
+              <div className="mt-6">
+                <QuizRunner quiz={course.final_quiz} isAuthed={isAuthed} />
+              </div>
+            </>
+          ) : !active ? (
+            <div className="border border-dashed p-12 text-center text-muted-foreground">
               This course has no chapters yet.
             </div>
           ) : (
             <>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs text-muted-foreground">
-                    Chapter {activeIndex + 1} of {total}
-                  </p>
                   <h1 className="font-heading text-2xl">{active.title}</h1>
                 </div>
                 {!preview && (
@@ -194,7 +216,6 @@ export function LearnerView({
                 )}
               </div>
 
-              {/* video */}
               <div className="mt-4">
                 {active.youtube_video_id ? (
                   <YouTubeEmbed
@@ -202,7 +223,7 @@ export function LearnerView({
                     title={active.title}
                   />
                 ) : (
-                  <div className="grid aspect-video place-items-center rounded-none border bg-muted text-muted-foreground">
+                  <div className="grid aspect-video place-items-center border bg-muted text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
                       <Play className="size-8 opacity-40" />
                       <span className="text-sm">No video for this chapter</span>
@@ -211,14 +232,49 @@ export function LearnerView({
                 )}
               </div>
 
-              {/* tabs */}
-              <Tabs defaultValue="about" className="mt-6">
+              <Tabs defaultValue="summary" className="mt-6">
                 <TabsList>
-                  <TabsTrigger value="about">About</TabsTrigger>
                   <TabsTrigger value="summary">Summary</TabsTrigger>
                   <TabsTrigger value="quiz">Quiz</TabsTrigger>
                   <TabsTrigger value="chat">Chat</TabsTrigger>
+                  <TabsTrigger value="about">About</TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="summary" className="pt-4">
+                  {active.summary ? (
+                    <div>
+                      <Badge
+                        variant={
+                          active.summary.reviewed_by_author
+                            ? "default"
+                            : "secondary"
+                        }
+                        className="mb-3"
+                      >
+                        {active.summary.reviewed_by_author
+                          ? "Reviewed by author"
+                          : "AI-generated"}
+                      </Badge>
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                        {active.summary.content}
+                      </div>
+                    </div>
+                  ) : (
+                    <EmptyAi label="No summary yet — the author hasn't generated AI content for this chapter." />
+                  )}
+                </TabsContent>
+
+                <TabsContent value="quiz" className="pt-4">
+                  {active.quiz && active.quiz.questions.length > 0 ? (
+                    <QuizRunner quiz={active.quiz} isAuthed={isAuthed} />
+                  ) : (
+                    <EmptyAi label="No quiz yet for this chapter." />
+                  )}
+                </TabsContent>
+
+                <TabsContent value="chat" className="pt-4">
+                  <ChatPanel chapterId={active.id} isAuthed={isAuthed} />
+                </TabsContent>
 
                 <TabsContent value="about" className="pt-4">
                   {active.description ? (
@@ -231,37 +287,7 @@ export function LearnerView({
                     </p>
                   )}
                 </TabsContent>
-
-                <TabsContent value="summary" className="pt-4">
-                  <ComingSoon feature="AI summary" />
-                </TabsContent>
-                <TabsContent value="quiz" className="pt-4">
-                  <ComingSoon feature="Chapter quiz" />
-                </TabsContent>
-                <TabsContent value="chat" className="pt-4">
-                  <ComingSoon feature="Chat tutor" />
-                </TabsContent>
               </Tabs>
-
-              {/* prev / next */}
-              <div className="mt-8 flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={activeIndex <= 0}
-                  onClick={() => setActiveId(flat[activeIndex - 1]?.id ?? null)}
-                >
-                  ← Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={activeIndex >= total - 1}
-                  onClick={() => setActiveId(flat[activeIndex + 1]?.id ?? null)}
-                >
-                  Next →
-                </Button>
-              </div>
             </>
           )}
         </div>
@@ -270,16 +296,10 @@ export function LearnerView({
   );
 }
 
-function ComingSoon({ feature }: { feature: string }) {
+function EmptyAi({ label }: { label: string }) {
   return (
-    <Card>
-      <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-        {/* <Badge variant="secondary">Phase 3</Badge> */}
-        <Badge variant="secondary">Comming Soon</Badge>
-        <p className="text-sm text-muted-foreground">
-          {feature} about the video.
-        </p>
-      </CardContent>
-    </Card>
+    <div className="border border-dashed p-8 text-center text-sm text-muted-foreground">
+      {label}
+    </div>
   );
 }

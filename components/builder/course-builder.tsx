@@ -36,8 +36,18 @@ import {
   unpublishCourse,
   type SaveCourseTreeInput,
 } from "@/lib/actions/course-tree";
+import {
+  getPendingAiChapters,
+  generateChapterAI,
+  generateFinalCourseQuiz,
+} from "@/lib/actions/ai";
 import { extractYoutubeId } from "@/lib/schemas/course";
-import type { CourseTree, UnitWithChapters, CourseStatus } from "@/lib/types";
+import type {
+  CourseTree,
+  UnitWithChapters,
+  CourseStatus,
+  AiStatus,
+} from "@/lib/types";
 
 function findChapter(units: UnitWithChapters[], id: string | number) {
   for (let u = 0; u < units.length; u++) {
@@ -81,6 +91,7 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const [restore, setRestore] = useState<Backup | null>(null);
 
@@ -411,6 +422,42 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
     router.refresh();
   }
 
+  function setChapterAiStatus(id: string, aiStatus: AiStatus) {
+    commit(
+      unitsRef.current.map((u) => ({
+        ...u,
+        chapters: u.chapters.map((c) =>
+          c.id === id ? { ...c, ai_status: aiStatus } : c,
+        ),
+      })),
+    );
+  }
+
+  async function handleGenerateAI() {
+    if (dirty) {
+      const ok = await doSave();
+      if (!ok) return;
+    }
+    setGenerating(true);
+    try {
+      const pending = await getPendingAiChapters(course.id);
+      if (pending.length === 0) {
+        toast.info("All chapters are already up to date.");
+      }
+      for (const id of pending) {
+        setChapterAiStatus(id, "processing");
+        const res = await generateChapterAI(id);
+        setChapterAiStatus(id, res.ok ? res.status : "error");
+      }
+      await generateFinalCourseQuiz(course.id);
+      if (status === "published") setHasUnpublished(true);
+      toast.success("AI content generated");
+      router.refresh();
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   const publishLabel =
     status === "draft"
       ? "Publish"
@@ -448,11 +495,12 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
           <Button
             variant="outline"
             size="sm"
-            disabled
-            title="Generate AI content — coming in Phase 3"
-            className="hidden"
+            onClick={handleGenerateAI}
+            disabled={generating || saving || totalChapters === 0}
+            title="Transcribe videos and generate summaries + quizzes"
           >
-            <Sparkles className="size-4" /> Generate AI
+            <Sparkles className="size-4" />
+            {generating ? "Generating…" : "Generate AI"}
           </Button>
           <Button
             variant="outline"
@@ -565,6 +613,7 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
                     onChapterTitleChange={handleChapterTitle}
                     onChapterVideoChange={handleChapterVideo}
                     onDeleteChapter={handleDeleteChapter}
+                    onAiStatusChange={setChapterAiStatus}
                   />
                 ))}
               </SortableContext>

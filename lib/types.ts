@@ -1,5 +1,5 @@
 export type CourseStatus = "draft" | "published";
-export type AiStatus = "idle" | "processing" | "ready" | "error";
+export type AiStatus = "idle" | "processing" | "ready" | "error" | "stale";
 
 export interface Course {
   id: string;
@@ -67,6 +67,25 @@ export interface CourseCard {
 }
 
 // ── Published snapshot (courses.published_tree) — learner-facing, no answers ──
+export interface PublishedQuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  position: number;
+  // no correct_index / explanation — those stay server-side (see submitQuiz)
+}
+
+export interface PublishedQuiz {
+  id: string;
+  reviewed_by_author: boolean;
+  questions: PublishedQuizQuestion[];
+}
+
+export interface PublishedSummary {
+  content: string;
+  reviewed_by_author: boolean;
+}
+
 export interface PublishedChapter {
   id: string;
   title: string;
@@ -74,7 +93,8 @@ export interface PublishedChapter {
   youtube_url: string | null;
   youtube_video_id: string | null;
   position: number;
-  // Phase 3 adds: summary, quiz (questions/options only), reviewed_by_author
+  summary: PublishedSummary | null;
+  quiz: PublishedQuiz | null;
 }
 
 export interface PublishedUnit {
@@ -87,4 +107,50 @@ export interface PublishedUnit {
 
 export interface PublishedTree {
   units: PublishedUnit[];
+  final_quiz: PublishedQuiz | null;
+}
+
+// ── Learner-facing course (from the snapshot, or a draft for author preview) ──
+export type LearnerQuizQuestion = PublishedQuizQuestion;
+export type LearnerQuiz = PublishedQuiz;
+
+export interface LearnerChapter {
+  id: string;
+  title: string;
+  description: string;
+  youtube_video_id: string | null;
+  summary: PublishedSummary | null;
+  quiz: LearnerQuiz | null;
+}
+
+export interface LearnerUnit {
+  id: string;
+  title: string;
+  chapters: LearnerChapter[];
+}
+
+export interface LearnerCourse {
+  id: string;
+  title: string;
+  author_name: string | null;
+  units: LearnerUnit[];
+  final_quiz: LearnerQuiz | null;
+}
+
+// ── Author-side AI content (draft, from normalized tables) ───────────────────
+export interface ChapterAiContent {
+  chapterId: string;
+  summary: { content: string; reviewed_by_author: boolean } | null;
+  quiz: {
+    id: string;
+    reviewed_by_author: boolean;
+    questions: {
+      id: string;
+      question: string;
+      options: string[];
+      correct_index: number;
+      explanation: string;
+      position: number;
+    }[];
+  } | null;
 }
