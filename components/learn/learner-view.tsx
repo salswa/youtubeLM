@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, Play, CircleCheck, Circle, Trophy } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,7 +43,9 @@ export function LearnerView({
   const [view, setView] = useState<string>(flat[0]?.id ?? "final");
 
   const active: LearnerChapter | null =
-    view === "final" ? null : flat.find((c) => c.id === view) ?? flat[0] ?? null;
+    view === "final"
+      ? null
+      : (flat.find((c) => c.id === view) ?? flat[0] ?? null);
 
   const total = flat.length;
   const doneCount = flat.filter((c) => completed.has(c.id)).length;
@@ -85,12 +87,19 @@ export function LearnerView({
     <div className="grid min-h-[calc(100vh-4rem)] lg:grid-cols-[300px_1fr]">
       {/* sidebar */}
       <aside className="hidden overflow-y-auto border-r bg-card p-4 lg:block">
-        <Link
+        {/* <Link
           href="/courses"
           className="text-xs text-muted-foreground hover:text-foreground"
         >
           ← All courses
-        </Link>
+        </Link> */}
+        <Button
+          onClick={() => router.back()}
+          variant="ghost"
+          className="text-xs text-muted-foreground hover:text-foreground"
+        >
+          ← Back
+        </Button>
         <h2 className="mt-2 font-heading text-lg leading-tight">
           {course.title}
         </h2>
@@ -243,7 +252,7 @@ export function LearnerView({
                 <TabsContent value="summary" className="pt-4">
                   {active.summary ? (
                     <div>
-                      <Badge
+                      {/* <Badge
                         variant={
                           active.summary.reviewed_by_author
                             ? "default"
@@ -254,7 +263,7 @@ export function LearnerView({
                         {active.summary.reviewed_by_author
                           ? "Reviewed by author"
                           : "AI-generated"}
-                      </Badge>
+                      </Badge> */}
                       <div className="whitespace-pre-wrap text-sm leading-relaxed">
                         {active.summary.content}
                       </div>
