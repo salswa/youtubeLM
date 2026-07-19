@@ -182,6 +182,8 @@ async function runChapterPipeline(
     return "ready";
   } catch (e) {
     const message = e instanceof Error ? e.message : "Generation failed";
+    // Surface in server logs (Vercel functions) — the DB only keeps the last error.
+    console.error(`[ai] chapter ${chapterId} pipeline failed:`, e);
     await admin
       .from("chapters")
       .update({ ai_status: "error", ai_error: message.slice(0, 500) })
@@ -319,6 +321,7 @@ export async function generateFinalCourseQuiz(courseId: string) {
     return { ok: true as const };
   } catch (e) {
     const message = e instanceof Error ? e.message : "Final quiz failed";
+    console.error(`[ai] final quiz for course ${courseId} failed:`, e);
     return { ok: false as const, error: message };
   }
 }

@@ -43,8 +43,7 @@ export async function POST(req: Request) {
 
   const user = await getUser();
   const allowed =
-    course?.status === "published" ||
-    (!!user && user.id === course?.author_id);
+    course?.status === "published" || (!!user && user.id === course?.author_id);
   if (!allowed) return new Response("Forbidden", { status: 403 });
 
   const { data: transcript } = await admin

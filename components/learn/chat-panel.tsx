@@ -40,10 +40,15 @@ export function ChatPanel({
         body: JSON.stringify({ chapterId, messages: next }),
       });
       if (!res.ok || !res.body) {
-        setMessages([
-          ...next,
-          { role: "assistant", content: "Sorry, something went wrong." },
-        ]);
+        // Server returns JSON { error } on failure — surface the real reason.
+        let detail = "Sorry, something went wrong. Please try again.";
+        try {
+          const body = await res.json();
+          if (body?.error) detail = body.error;
+        } catch {
+          /* non-JSON body; keep the default message */
+        }
+        setMessages([...next, { role: "assistant", content: detail }]);
         return;
       }
       const reader = res.body.getReader();
@@ -56,6 +61,28 @@ export function ChatPanel({
         acc += decoder.decode(value, { stream: true });
         setMessages([...next, { role: "assistant", content: acc }]);
       }
+      // A 200 with an empty body means the model produced nothing (e.g. a
+      // silent stream error) — don't leave the user staring at an empty bubble.
+      if (!acc.trim()) {
+        setMessages([
+          ...next,
+          {
+            role: "assistant",
+            content:
+              "⚠️ The tutor didn't return a response. Please try again in a moment.",
+          },
+        ]);
+      }
+    } catch (err) {
+      console.error("[chat] request failed:", err);
+      setMessages([
+        ...next,
+        {
+          role: "assistant",
+          content:
+            "⚠️ Couldn't reach the tutor. Check your connection and try again.",
+        },
+      ]);
     } finally {
       setStreaming(false);
     }
