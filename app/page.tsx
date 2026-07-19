@@ -8,7 +8,7 @@ export default function HomePage() {
     <>
       <SiteNav />
       <main className="mx-auto max-w-6xl px-6">
-        <section className="flex flex-col items-center py-24 text-center">
+        <section className="flex flex-col items-center py-12 text-center">
           <Badge variant="secondary" className="mb-6 uppercase tracking-wide">
             Turn YouTube into structured courses
           </Badge>
@@ -33,7 +33,7 @@ export default function HomePage() {
             </Link>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            Free · Create up to 3 courses · No credit card
+            Build in Minutes · Free · Create up to 3 courses
           </p>
         </section>
       </main>

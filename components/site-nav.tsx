@@ -8,7 +8,7 @@ export async function SiteNav() {
 
   return (
     <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
         <Link
           href="/"
           className="flex items-center gap-2 font-heading text-lg font-bold tracking-tight"

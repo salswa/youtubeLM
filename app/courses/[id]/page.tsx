@@ -1,10 +1,7 @@
 import { notFound } from "next/navigation";
 import { SiteNav } from "@/components/site-nav";
-import {
-  getPublishedCourse,
-  getCompletedChapterIds,
-  isEnrolled,
-} from "@/lib/data/courses";
+import { getCompletedChapterIds, isEnrolled } from "@/lib/data/courses";
+import { getLearnerCourse } from "@/lib/data/learner";
 import { getUser } from "@/lib/auth";
 import { LearnerView } from "@/components/learn/learner-view";
 
@@ -16,7 +13,7 @@ export default async function CoursePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const course = await getPublishedCourse(id);
+  const course = await getLearnerCourse(id);
   if (!course) notFound();
 
   const user = await getUser();

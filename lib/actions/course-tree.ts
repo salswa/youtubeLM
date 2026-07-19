@@ -5,7 +5,8 @@ import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { extractYoutubeId, courseSchema } from "@/lib/schemas/course";
 import { getCourseTree } from "@/lib/data/courses";
-import type { CourseTree, PublishedTree } from "@/lib/types";
+import { getAuthorAiContent, type AuthorAiContent } from "@/lib/data/ai";
+import type { CourseTree, PublishedTree, PublishedQuiz } from "@/lib/types";
 
 export interface SaveChapterInput {
   id: string;
@@ -49,7 +50,7 @@ export async function saveCourseTree(
     .single();
   const isPublished = courseRow?.status === "published";
 
-  // Existing rows (to detect video changes + deletions).
+  // Existing rows (to detect deletions).
   const { data: existingUnits } = await supabase
     .from("units")
     .select("id")
@@ -59,12 +60,9 @@ export async function saveCourseTree(
   const { data: existingChapters } = existingUnitIds.length
     ? await supabase
         .from("chapters")
-        .select("id, youtube_video_id, ai_status")
+        .select("id")
         .in("unit_id", existingUnitIds)
-    : { data: [] as { id: string; youtube_video_id: string | null; ai_status: string }[] };
-  const existingChapterMap = new Map(
-    (existingChapters ?? []).map((c) => [c.id, c]),
-  );
+    : { data: [] as { id: string }[] };
 
   // Update course meta (+ mark dirty-since-publish).
   const { error: metaErr } = await supabase
@@ -91,13 +89,11 @@ export async function saveCourseTree(
     if (error) return { ok: false as const, error: error.message };
   }
 
-  // Upsert chapters.
+  // Upsert chapters. The video URL is locked once a chapter exists, so a
+  // chapter's video never changes here and AI status stays as-is.
   const chapterRows = input.units.flatMap((u) =>
     u.chapters.map((c, j) => {
       const videoId = c.youtube_url ? extractYoutubeId(c.youtube_url) : null;
-      const prev = existingChapterMap.get(c.id);
-      const videoChanged = prev && prev.youtube_video_id !== videoId;
-      const markStale = videoChanged && prev?.ai_status === "ready";
       return {
         id: c.id,
         unit_id: u.id,
@@ -106,7 +102,6 @@ export async function saveCourseTree(
         youtube_url: c.youtube_url || null,
         youtube_video_id: videoId,
         position: j,
-        ...(markStale ? { ai_status: "stale" } : {}),
       };
     }),
   );
@@ -132,29 +127,73 @@ export async function saveCourseTree(
     await supabase.from("units").delete().in("id", unitsToDelete);
   }
 
+  // Adding a new chapter or removing an existing one invalidates a generated
+  // final quiz — its coverage no longer matches the course, so mark it stale.
+  const existingChapterIds = new Set((existingChapters ?? []).map((c) => c.id));
+  const hasNewChapter = input.units.some((u) =>
+    u.chapters.some((c) => !existingChapterIds.has(c.id)),
+  );
+  if (hasNewChapter || chaptersToDelete.length) {
+    await supabase
+      .from("courses")
+      .update({ final_quiz_status: "stale" })
+      .eq("id", courseId)
+      .eq("final_quiz_status", "ready");
+  }
+
   revalidatePath(`/dashboard/courses/${courseId}/edit`);
   revalidatePath("/dashboard");
   return { ok: true as const, savedAt: new Date().toISOString() };
 }
 
+/** Strip answers from a quiz for the learner-facing snapshot. */
+function stripQuiz(
+  quiz: AuthorAiContent["byChapter"][string]["quiz"] | AuthorAiContent["finalQuiz"],
+): PublishedQuiz | null {
+  if (!quiz) return null;
+  return {
+    id: quiz.id,
+    reviewed_by_author: quiz.reviewed_by_author,
+    questions: quiz.questions.map((q) => ({
+      id: q.id,
+      question: q.question,
+      options: q.options,
+      position: q.position,
+    })),
+  };
+}
+
 /** Serialize the current draft into a learner-facing snapshot (no quiz answers). */
-function serializePublishedTree(tree: CourseTree): PublishedTree {
+function serializePublishedTree(
+  tree: CourseTree,
+  ai: AuthorAiContent,
+): PublishedTree {
   return {
     units: tree.units.map((u, i) => ({
       id: u.id,
       title: u.title,
       description: u.description,
       position: i,
-      chapters: u.chapters.map((c, j) => ({
-        id: c.id,
-        title: c.title,
-        description: c.description,
-        youtube_url: c.youtube_url,
-        youtube_video_id: c.youtube_video_id,
-        position: j,
-        // Phase 3: summary + quiz (questions/options only) + reviewed flags
-      })),
+      chapters: u.chapters.map((c, j) => {
+        const content = ai.byChapter[c.id];
+        return {
+          id: c.id,
+          title: c.title,
+          description: c.description,
+          youtube_url: c.youtube_url,
+          youtube_video_id: c.youtube_video_id,
+          position: j,
+          summary: content?.summary
+            ? {
+                content: content.summary.content,
+                reviewed_by_author: content.summary.reviewed_by_author,
+              }
+            : null,
+          quiz: stripQuiz(content?.quiz ?? null),
+        };
+      }),
     })),
+    final_quiz: stripQuiz(ai.finalQuiz),
   };
 }
 
@@ -177,12 +216,13 @@ export async function publishCourse(courseId: string) {
     return { ok: false as const, error: "Add at least one chapter first." };
   }
 
+  const ai = await getAuthorAiContent(courseId);
   const supabase = await createClient();
   const { error } = await supabase
     .from("courses")
     .update({
       status: "published",
-      published_tree: serializePublishedTree(tree),
+      published_tree: serializePublishedTree(tree, ai),
       published_at: new Date().toISOString(),
       has_unpublished_changes: false,
     })
