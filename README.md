@@ -41,9 +41,9 @@ grounded in the actual video, and track their progress.
 **The balance is the point:** human curation decides _what_ to learn from; AI scales _how_
 it's taught.
 
-> 🧭 **Live walkthrough:** the app ships a self‑contained demo at [demo](https://youtube-lm.vercel.app/demo) —
-> product overview, [pitch deck](https://youtube-lm.vercel.app/demo/pitch), and a
-> [demo video](https://youtube-lm.vercel.app/demo/video).
+> 🧭 **Live walkthrough:** the app ships a self‑contained demo at <a href="https://youtube-lm.vercel.app/demo" target="_blank" rel="noopener noreferrer">demo</a> —
+> product overview, <a href="https://youtube-lm.vercel.app/demo/pitch" target="_blank" rel="noopener noreferrer">pitch deck</a>, and a
+> <a href="https://youtube-lm.vercel.app/demo/video" target="_blank" rel="noopener noreferrer">demo video</a>.
 
 ---
 
@@ -179,8 +179,7 @@ Run the migrations in order from `supabase-script/migrations/` in the **Supabase
 0004_final_quiz_status.sql # final-quiz status tracking
 ```
 
-Then enable **Google** as an OAuth provider in Supabase Auth. See [`SETUP.md`](https://supabase.com/docs/guides/auth/social-login/auth-google)
-for the detailed walkthrough.
+Then enable **Google** as an OAuth provider in Supabase Auth. See <a href="https://supabase.com/docs/guides/auth/social-login/auth-google" target="_blank" rel="noopener noreferrer">setup</a> for the detailed walkthrough.
 
 ### 4. Run
 
