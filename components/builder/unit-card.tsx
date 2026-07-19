@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChapterItem } from "@/components/builder/chapter-item";
-import type { UnitWithChapters, AiStatus } from "@/lib/types";
+import type { UnitWithChapters, AiStatus, AiKind } from "@/lib/types";
 
 export function UnitCard({
   unit,
@@ -33,7 +33,7 @@ export function UnitCard({
   onChapterTitleChange: (id: string, title: string) => void;
   onChapterVideoChange: (id: string, url: string) => void;
   onDeleteChapter: (id: string) => void;
-  onAiStatusChange: (id: string, status: AiStatus) => void;
+  onAiStatusChange: (id: string, kind: AiKind, status: AiStatus) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: unit.id, data: { type: "unit" } });

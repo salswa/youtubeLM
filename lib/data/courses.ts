@@ -55,45 +55,6 @@ function snapshotChapterCount(tree: unknown): number {
   return (t?.units ?? []).reduce((n, u) => n + (u.chapters?.length ?? 0), 0);
 }
 
-/** A published course tree from the frozen snapshot (learner-facing). */
-export async function getPublishedCourse(
-  courseId: string,
-): Promise<CourseTree | null> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("courses")
-    .select(`*, author:profiles(display_name)`)
-    .eq("id", courseId)
-    .eq("status", "published")
-    .maybeSingle();
-
-  if (!data || !data.published_tree) return null;
-  const tree = data.published_tree as PublishedTree;
-
-  return {
-    ...data,
-    author_name: authorName(data.author),
-    units: tree.units.map((u) => ({
-      id: u.id,
-      course_id: courseId,
-      title: u.title,
-      description: u.description,
-      position: u.position,
-      chapters: u.chapters.map((c) => ({
-        id: c.id,
-        unit_id: u.id,
-        title: c.title,
-        description: c.description,
-        youtube_url: c.youtube_url,
-        youtube_video_id: c.youtube_video_id,
-        position: c.position,
-        ai_status: "ready" as const,
-        ai_error: null,
-      })),
-    })),
-  } as CourseTree;
-}
-
 /** Published courses for the public grid (counts from the snapshot). */
 export async function getPublishedCourses(): Promise<CourseCard[]> {
   const supabase = await createClient();

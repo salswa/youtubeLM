@@ -2,14 +2,14 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Play } from "lucide-react";
+import { GripVertical, Trash2, Play, Lock as LockIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AiStatusBadge } from "@/components/builder/ai-status-badge";
-import { ChapterAiDialog } from "@/components/builder/chapter-ai-dialog";
+import { ChapterSummaryDialog } from "@/components/builder/chapter-summary-dialog";
+import { ChapterQuizDialog } from "@/components/builder/chapter-quiz-dialog";
 import { youtubeThumb } from "@/lib/youtube";
-import type { Chapter, AiStatus } from "@/lib/types";
+import type { Chapter, AiStatus, AiKind } from "@/lib/types";
 
 export function ChapterItem({
   chapter,
@@ -22,7 +22,7 @@ export function ChapterItem({
   onTitleChange: (id: string, title: string) => void;
   onVideoChange: (id: string, url: string) => void;
   onDelete: (id: string) => void;
-  onAiStatusChange: (id: string, status: AiStatus) => void;
+  onAiStatusChange: (id: string, kind: AiKind, status: AiStatus) => void;
 }) {
   const {
     attributes,
@@ -42,13 +42,15 @@ export function ChapterItem({
     opacity: isDragging ? 0.4 : 1,
   };
 
+  const hasVideo = !!chapter.youtube_video_id;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className="flex items-start gap-3 border-t bg-background p-3"
     >
-      <Button
+      <button
         type="button"
         className="mt-1 cursor-grab text-muted-foreground/60 hover:text-foreground"
         {...attributes}
@@ -56,7 +58,7 @@ export function ChapterItem({
         aria-label="Drag chapter"
       >
         <GripVertical className="size-4" />
-      </Button>
+      </button>
 
       {/* thumbnail */}
       <div className="grid aspect-video w-24 shrink-0 place-items-center overflow-hidden rounded-none border bg-muted">
@@ -85,9 +87,15 @@ export function ChapterItem({
             onBlur={(e) => onVideoChange(chapter.id, e.target.value)}
             className="h-8 text-xs"
             placeholder="Paste YouTube URL…"
+            readOnly={hasVideo}
+            disabled={hasVideo}
+            title={
+              hasVideo ? "The video is locked once set." : undefined
+            }
           />
-          {chapter.youtube_video_id ? (
-            <Badge variant="secondary" className="shrink-0">
+          {hasVideo ? (
+            <Badge variant="secondary" className="shrink-0 gap-1">
+              <LockIcon className="size-3" />
               Video
             </Badge>
           ) : (
@@ -95,16 +103,28 @@ export function ChapterItem({
               No video
             </Badge>
           )}
-          <span className="shrink-0">
-            <AiStatusBadge status={chapter.ai_status} />
-          </span>
+        </div>
+
+        {/* AI controls — summary + quiz, each with its own status + popup */}
+        <div className="flex flex-wrap gap-2">
+          <ChapterSummaryDialog
+            chapterId={chapter.id}
+            status={chapter.summary_status}
+            onStatusChange={(id, s) => onAiStatusChange(id, "summary", s)}
+          />
+          <ChapterQuizDialog
+            chapterId={chapter.id}
+            status={chapter.quiz_status}
+            onStatusChange={(id, s) => onAiStatusChange(id, "quiz", s)}
+          />
+          {!hasVideo && (
+            <span className="self-center text-xs text-muted-foreground">
+              Add a video to generate AI
+            </span>
+          )}
         </div>
       </div>
 
-      <ChapterAiDialog
-        chapterId={chapter.id}
-        onAiStatusChange={onAiStatusChange}
-      />
       <Button
         type="button"
         variant="ghost"

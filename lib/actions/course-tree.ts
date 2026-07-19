@@ -50,7 +50,7 @@ export async function saveCourseTree(
     .single();
   const isPublished = courseRow?.status === "published";
 
-  // Existing rows (to detect video changes + deletions).
+  // Existing rows (to detect deletions).
   const { data: existingUnits } = await supabase
     .from("units")
     .select("id")
@@ -60,12 +60,9 @@ export async function saveCourseTree(
   const { data: existingChapters } = existingUnitIds.length
     ? await supabase
         .from("chapters")
-        .select("id, youtube_video_id, ai_status")
+        .select("id")
         .in("unit_id", existingUnitIds)
-    : { data: [] as { id: string; youtube_video_id: string | null; ai_status: string }[] };
-  const existingChapterMap = new Map(
-    (existingChapters ?? []).map((c) => [c.id, c]),
-  );
+    : { data: [] as { id: string }[] };
 
   // Update course meta (+ mark dirty-since-publish).
   const { error: metaErr } = await supabase
@@ -92,13 +89,11 @@ export async function saveCourseTree(
     if (error) return { ok: false as const, error: error.message };
   }
 
-  // Upsert chapters.
+  // Upsert chapters. The video URL is locked once a chapter exists, so a
+  // chapter's video never changes here and AI status stays as-is.
   const chapterRows = input.units.flatMap((u) =>
     u.chapters.map((c, j) => {
       const videoId = c.youtube_url ? extractYoutubeId(c.youtube_url) : null;
-      const prev = existingChapterMap.get(c.id);
-      const videoChanged = prev && prev.youtube_video_id !== videoId;
-      const markStale = videoChanged && prev?.ai_status === "ready";
       return {
         id: c.id,
         unit_id: u.id,
@@ -107,7 +102,6 @@ export async function saveCourseTree(
         youtube_url: c.youtube_url || null,
         youtube_video_id: videoId,
         position: j,
-        ...(markStale ? { ai_status: "stale" } : {}),
       };
     }),
   );
@@ -131,6 +125,20 @@ export async function saveCourseTree(
   }
   if (unitsToDelete.length) {
     await supabase.from("units").delete().in("id", unitsToDelete);
+  }
+
+  // Adding a new chapter or removing an existing one invalidates a generated
+  // final quiz — its coverage no longer matches the course, so mark it stale.
+  const existingChapterIds = new Set((existingChapters ?? []).map((c) => c.id));
+  const hasNewChapter = input.units.some((u) =>
+    u.chapters.some((c) => !existingChapterIds.has(c.id)),
+  );
+  if (hasNewChapter || chaptersToDelete.length) {
+    await supabase
+      .from("courses")
+      .update({ final_quiz_status: "stale" })
+      .eq("id", courseId)
+      .eq("final_quiz_status", "ready");
   }
 
   revalidatePath(`/dashboard/courses/${courseId}/edit`);

@@ -13,6 +13,7 @@ export interface Course {
   updated_at: string;
   published_at?: string | null;
   has_unpublished_changes?: boolean;
+  final_quiz_status?: AiStatus;
 }
 
 export interface Unit {
@@ -31,9 +32,13 @@ export interface Chapter {
   youtube_url: string | null;
   youtube_video_id: string | null;
   position: number;
-  ai_status: AiStatus;
+  summary_status: AiStatus;
+  quiz_status: AiStatus;
   ai_error: string | null;
 }
+
+/** Which AI artifact a per-chapter control acts on. */
+export type AiKind = "summary" | "quiz";
 
 /** A unit with its ordered chapters — the shape the builder & learner trees use. */
 export interface UnitWithChapters extends Unit {

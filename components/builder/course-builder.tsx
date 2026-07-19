@@ -38,15 +38,18 @@ import {
 } from "@/lib/actions/course-tree";
 import {
   getPendingAiChapters,
-  generateChapterAI,
-  generateFinalCourseQuiz,
+  generateChapterSummary,
+  generateChapterQuiz,
 } from "@/lib/actions/ai";
+import { FinalQuizDialog } from "@/components/builder/final-quiz-dialog";
+import { AiStatusIcon } from "@/components/builder/ai-status-icon";
 import { extractYoutubeId } from "@/lib/schemas/course";
 import type {
   CourseTree,
   UnitWithChapters,
   CourseStatus,
   AiStatus,
+  AiKind,
 } from "@/lib/types";
 
 function findChapter(units: UnitWithChapters[], id: string | number) {
@@ -56,6 +59,14 @@ function findChapter(units: UnitWithChapters[], id: string | number) {
   }
   return null;
 }
+
+const FINAL_QUIZ_LABEL: Record<AiStatus, string> = {
+  idle: "Not generated",
+  processing: "Generating…",
+  ready: "Ready",
+  error: "Failed",
+  stale: "Needs update",
+};
 
 interface Meta {
   title: string;
@@ -92,6 +103,9 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [finalQuizStatus, setFinalQuizStatus] = useState<AiStatus>(
+    course.final_quiz_status ?? "idle",
+  );
 
   const [restore, setRestore] = useState<Backup | null>(null);
 
@@ -102,10 +116,24 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
   );
 
   const totalChapters = units.reduce((n, u) => n + u.chapters.length, 0);
-  const chaptersWithVideo = units.reduce(
-    (n, u) => n + u.chapters.filter((c) => c.youtube_video_id).length,
-    0,
+  const withVideo = units.flatMap((u) => u.chapters).filter(
+    (c) => c.youtube_video_id,
   );
+  const chaptersWithVideo = withVideo.length;
+  const summariesReady = withVideo.filter(
+    (c) => c.summary_status === "ready",
+  ).length;
+  const quizzesReady = withVideo.filter(
+    (c) => c.quiz_status === "ready",
+  ).length;
+  const isPending = (s: AiStatus) =>
+    s === "idle" || s === "stale" || s === "error";
+  const aiProcessing = withVideo.filter(
+    (c) => c.summary_status === "processing" || c.quiz_status === "processing",
+  ).length;
+  const aiPending = withVideo.filter(
+    (c) => isPending(c.summary_status) || isPending(c.quiz_status),
+  ).length;
 
   // ── localStorage: backup while dirty, restore prompt on mount ──────────────
   useEffect(() => {
@@ -290,7 +318,8 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
                   youtube_url: null,
                   youtube_video_id: null,
                   position: u.chapters.length,
-                  ai_status: "idle",
+                  summary_status: "idle",
+                  quiz_status: "idle",
                   ai_error: null,
                 },
               ],
@@ -422,12 +451,13 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
     router.refresh();
   }
 
-  function setChapterAiStatus(id: string, aiStatus: AiStatus) {
+  function setChapterAiStatus(id: string, kind: AiKind, aiStatus: AiStatus) {
+    const field = kind === "summary" ? "summary_status" : "quiz_status";
     commit(
       unitsRef.current.map((u) => ({
         ...u,
         chapters: u.chapters.map((c) =>
-          c.id === id ? { ...c, ai_status: aiStatus } : c,
+          c.id === id ? { ...c, [field]: aiStatus } : c,
         ),
       })),
     );
@@ -444,12 +474,18 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
       if (pending.length === 0) {
         toast.info("All chapters are already up to date.");
       }
-      for (const id of pending) {
-        setChapterAiStatus(id, "processing");
-        const res = await generateChapterAI(id);
-        setChapterAiStatus(id, res.ok ? res.status : "error");
+      for (const item of pending) {
+        if (item.needSummary) {
+          setChapterAiStatus(item.id, "summary", "processing");
+          const res = await generateChapterSummary(item.id);
+          setChapterAiStatus(item.id, "summary", res.ok ? res.status : "error");
+        }
+        if (item.needQuiz) {
+          setChapterAiStatus(item.id, "quiz", "processing");
+          const res = await generateChapterQuiz(item.id);
+          setChapterAiStatus(item.id, "quiz", res.ok ? res.status : "error");
+        }
       }
-      await generateFinalCourseQuiz(course.id);
       if (status === "published") setHasUnpublished(true);
       toast.success("AI content generated");
       router.refresh();
@@ -492,16 +528,6 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
           >
             <Eye className="size-4" /> Preview
           </Link>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleGenerateAI}
-            disabled={generating || saving || totalChapters === 0}
-            title="Transcribe videos and generate summaries + quizzes"
-          >
-            <Sparkles className="size-4" />
-            {generating ? "Generating…" : "Generate AI"}
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -625,6 +651,16 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
               No units yet. Add your first unit to get started.
             </div>
           )}
+
+          {totalChapters > 0 && (
+            <div className="mt-4">
+              <FinalQuizDialog
+                courseId={course.id}
+                status={finalQuizStatus}
+                onStatusChange={setFinalQuizStatus}
+              />
+            </div>
+          )}
         </div>
 
         {/* sidebar */}
@@ -646,16 +682,86 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
               </CheckLine>
               <Separator className="my-3" />
               <p className="text-xs text-muted-foreground">
-                <strong>Save</strong> stores your draft.{" "}
-                {/* <strong>Generate AI</strong> (Phase 3) fills summaries &amp;
-                quizzes. */}
-                <strong>Publish</strong> makes the course public — edits stay
-                private until you publish changes.
+                <strong>Save</strong> stores your draft. <strong>Publish</strong>{" "}
+                makes the course public — edits stay private until you publish
+                changes.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-heading text-base">
+                AI content
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="space-y-1.5">
+                <StatRow
+                  label="Summaries"
+                  done={summariesReady}
+                  total={chaptersWithVideo}
+                />
+                <StatRow
+                  label="Quizzes"
+                  done={quizzesReady}
+                  total={chaptersWithVideo}
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Final quiz</span>
+                  <span className="flex items-center gap-1 font-medium">
+                    <AiStatusIcon status={finalQuizStatus} />
+                    {FINAL_QUIZ_LABEL[finalQuizStatus]}
+                  </span>
+                </div>
+              </div>
+
+              {(aiProcessing > 0 || aiPending > 0) && (
+                <p className="text-xs text-muted-foreground">
+                  {aiProcessing > 0 && <>{aiProcessing} generating… </>}
+                  {aiPending > 0 && <>{aiPending} pending generation</>}
+                </p>
+              )}
+
+              <Button
+                className="w-full"
+                size="sm"
+                onClick={handleGenerateAI}
+                disabled={generating || saving || chaptersWithVideo === 0}
+              >
+                <Sparkles className="size-4" />
+                {generating ? "Generating…" : "Generate AI"}
+              </Button>
+
+              <p className="text-xs text-muted-foreground">
+                Generates a summary &amp; quiz for new or changed chapters.
+                Author-reviewed content is skipped. Save first to include the
+                latest edits.
               </p>
             </CardContent>
           </Card>
         </aside>
       </div>
+    </div>
+  );
+}
+
+function StatRow({
+  label,
+  done,
+  total,
+}: {
+  label: string;
+  done: number;
+  total: number;
+}) {
+  const complete = total > 0 && done === total;
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={complete ? "font-medium text-primary" : "font-medium"}>
+        {done}/{total}
+      </span>
     </div>
   );
 }
