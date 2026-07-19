@@ -22,6 +22,9 @@ can chat with — for every chapter.
 ![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth-3FCF8E?logo=supabase&logoColor=white)
 ![Gemini](https://img.shields.io/badge/Google-Gemini-8E75B2?logo=googlegemini&logoColor=white)
 
+<img width="1866" height="868" alt="YoutubeLM_hero_image" src="https://github.com/user-attachments/assets/b98d9ac9-5db8-4738-9310-7be930740679" />
+
+
 </div>
 
 ---
