@@ -51,7 +51,9 @@ export function ChapterQuizDialog({
     const q = data?.quiz ?? null;
     setQuiz(q);
     setSaved(
-      Object.fromEntries((q?.questions ?? []).map((x) => [x.id, JSON.stringify(x)])),
+      Object.fromEntries(
+        (q?.questions ?? []).map((x) => [x.id, JSON.stringify(x)]),
+      ),
     );
     setLoading(false);
   }
@@ -64,7 +66,12 @@ export function ChapterQuizDialog({
   function patch(idx: number, p: Partial<Q>) {
     setQuiz((q) =>
       q
-        ? { ...q, questions: q.questions.map((x, i) => (i === idx ? { ...x, ...p } : x)) }
+        ? {
+            ...q,
+            questions: q.questions.map((x, i) =>
+              i === idx ? { ...x, ...p } : x,
+            ),
+          }
         : q,
     );
   }
@@ -103,7 +110,7 @@ export function ChapterQuizDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm" title={aiStatusLabel(status)}>
+          <Button variant="ghost" size="sm" title={aiStatusLabel(status)}>
             <AiStatusIcon status={status} /> Quiz
           </Button>
         }
@@ -127,7 +134,12 @@ export function ChapterQuizDialog({
               Not generated yet
             </span>
           )}
-          <Button variant="outline" size="sm" onClick={regenerate} disabled={busy}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={regenerate}
+            disabled={busy}
+          >
             <RefreshCw className="size-4" />
             {quiz ? "Regenerate" : "Generate"}
           </Button>

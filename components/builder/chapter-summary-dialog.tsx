@@ -72,7 +72,10 @@ export function ChapterSummaryDialog({
   }
 
   async function regenerate() {
-    if (hasContent && !confirm("Regenerate the summary? This overwrites edits.")) {
+    if (
+      hasContent &&
+      !confirm("Regenerate the summary? This overwrites edits.")
+    ) {
       return;
     }
     setBusy(true);
@@ -92,7 +95,7 @@ export function ChapterSummaryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm" title={aiStatusLabel(status)}>
+          <Button variant="ghost" size="sm" title={aiStatusLabel(status)}>
             <AiStatusIcon status={status} /> Summary
           </Button>
         }
@@ -116,7 +119,12 @@ export function ChapterSummaryDialog({
               Not generated yet
             </span>
           )}
-          <Button variant="outline" size="sm" onClick={regenerate} disabled={busy}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={regenerate}
+            disabled={busy}
+          >
             <RefreshCw className="size-4" />
             {hasContent ? "Regenerate" : "Generate"}
           </Button>
