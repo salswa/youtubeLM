@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -114,9 +114,19 @@ export function ChatPanel({
                 : "bg-muted"
             }`}
           >
-            {m.content || "…"}
+            {m.role === "assistant" && !m.content ? (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            ) : (
+              m.content
+            )}
           </div>
         ))}
+        {/* Waiting for the first token — no assistant bubble exists yet. */}
+        {streaming && messages[messages.length - 1]?.role === "user" && (
+          <div className="max-w-[85%] bg-muted px-3 py-2 text-sm">
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          </div>
+        )}
         <div ref={endRef} />
       </div>
       <form
