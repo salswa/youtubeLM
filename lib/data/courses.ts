@@ -62,8 +62,8 @@ export async function getPublishedCourses(): Promise<CourseCard[]> {
     .from("courses")
     .select(
       `id, title, description, subject, status, cover_url, published_tree,
-       author:profiles(display_name),
-       enrollments(count)`,
+       enrollment_count,
+       author:profiles(display_name)`,
     )
     .eq("status", "published")
     .order("created_at", { ascending: false });
@@ -71,7 +71,6 @@ export async function getPublishedCourses(): Promise<CourseCard[]> {
   if (error || !data) return [];
 
   return data.map((c): CourseCard => {
-    const enr = c.enrollments as unknown as { count: number }[] | null;
     return {
       id: c.id,
       title: c.title,
@@ -81,7 +80,7 @@ export async function getPublishedCourses(): Promise<CourseCard[]> {
       cover_url: c.cover_url,
       author_name: authorName(c.author),
       chapter_count: snapshotChapterCount(c.published_tree),
-      enrollment_count: enr?.[0]?.count ?? 0,
+      enrollment_count: c.enrollment_count ?? 0,
     };
   });
 }
@@ -93,9 +92,9 @@ export async function getMyCourses(userId: string): Promise<CourseCard[]> {
     .from("courses")
     .select(
       `id, title, description, subject, status, cover_url, has_unpublished_changes,
+       enrollment_count,
        author:profiles(display_name),
-       units(id, chapters(id)),
-       enrollments(count)`,
+       units(id, chapters(id))`,
     )
     .eq("author_id", userId)
     .order("created_at", { ascending: false });
@@ -103,7 +102,6 @@ export async function getMyCourses(userId: string): Promise<CourseCard[]> {
   if (error || !data) return [];
 
   return data.map((c): CourseCard => {
-    const enr = c.enrollments as unknown as { count: number }[] | null;
     return {
       id: c.id,
       title: c.title,
@@ -113,7 +111,7 @@ export async function getMyCourses(userId: string): Promise<CourseCard[]> {
       cover_url: c.cover_url,
       author_name: authorName(c.author),
       chapter_count: chapterCount(c.units),
-      enrollment_count: enr?.[0]?.count ?? 0,
+      enrollment_count: c.enrollment_count ?? 0,
       has_unpublished_changes: c.has_unpublished_changes ?? false,
     };
   });
@@ -135,7 +133,7 @@ export async function getEnrolledCourses(
       .from("enrollments")
       .select(
         `course:courses(id, title, description, subject, status, cover_url,
-          published_tree,
+          published_tree, enrollment_count,
           author:profiles(display_name))`,
       )
       .eq("user_id", userId)
@@ -156,6 +154,7 @@ export async function getEnrolledCourses(
         cover_url: string | null;
         author: unknown;
         published_tree: PublishedTree | null;
+        enrollment_count: number | null;
       } | null;
       if (!c) return null;
 
@@ -174,6 +173,7 @@ export async function getEnrolledCourses(
         cover_url: c.cover_url,
         author_name: authorName(c.author),
         chapter_count: total,
+        enrollment_count: c.enrollment_count ?? 0,
         completed_chapters: completed,
         progress_pct: total ? Math.round((completed / total) * 100) : 0,
       };
