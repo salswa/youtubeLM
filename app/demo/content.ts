@@ -116,9 +116,9 @@ export const SLIDES: Slide[] = [
     kicker: "06 · What's next",
     title: "Live today. Here's the road ahead.",
     points: [
-      "Now: build a course from real videos in minutes — free.",
-      "Next: certificates, cohorts, multi-language transcripts, recommendations.",
-      "Try it live and build your first course today.",
+      "Better experience: smoother builder, polished flows, mobile-friendly.",
+      "Learner-focused features: notes, bookmarks, certificates.",
+      "Smarter AI: sharper summaries and quizzes, plus multi-language support.",
     ],
     footer: "YouTubeLM — learn anything, the smart way.",
   },
