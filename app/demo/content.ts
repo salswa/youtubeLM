@@ -57,7 +57,7 @@ export interface Slide {
 /** 6-slide pitch deck: idea → problem → product → AI → market → what's next. */
 export const SLIDES: Slide[] = [
   {
-    kicker: "Hackathon Demo",
+    kicker: "Presenting",
     title: "YouTubeLM",
     subtitle: "Human-curated videos. AI-built courses.",
     footer:
@@ -75,12 +75,10 @@ export const SLIDES: Slide[] = [
   {
     kicker: "02 · Our belief",
     title: "Keep the judgment human. Let AI do the rest.",
-    subtitle:
-      "Choosing the video that truly explains a concept is a human call — so we deliberately keep it out of the model.",
     points: [
-      "A person hand-picks the single best video for each chapter.",
-      "That one decision guarantees a human touch at the core of every course.",
-      "AI then amplifies the pick — it never overrides it.",
+      "Judging which video truly explains a concept is human taste — so we never automate it.",
+      "A person hand-picks the single best video for each chapter; that choice anchors the whole course.",
+      "AI amplifies that pick into summaries, quizzes, and a tutor — it never overrides it.",
     ],
   },
   {
@@ -116,9 +114,9 @@ export const SLIDES: Slide[] = [
     kicker: "06 · What's next",
     title: "Live today. Here's the road ahead.",
     points: [
-      "Now: build a course from real videos in minutes — free.",
-      "Next: certificates, cohorts, multi-language transcripts, recommendations.",
-      "Try it live and build your first course today.",
+      "Better experience: smoother builder, polished flows, mobile-friendly.",
+      "Learner-focused features: notes, bookmarks, certificates.",
+      "Smarter AI: sharper summaries and quizzes, plus multi-language support.",
     ],
     footer: "YouTubeLM — learn anything, the smart way.",
   },

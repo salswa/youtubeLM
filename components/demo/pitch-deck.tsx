@@ -68,7 +68,7 @@ export function PitchDeck({ slides }: { slides: Slide[] }) {
       <button
         type="button"
         onClick={next}
-        className="flex flex-1 cursor-pointer flex-col justify-center px-8 text-left sm:px-20"
+        className="flex flex-1 cursor-pointer flex-col justify-center px-8 text-left sm:px-20 bg-accent"
         aria-label="Next slide"
       >
         <div className="mx-auto w-full max-w-4xl">

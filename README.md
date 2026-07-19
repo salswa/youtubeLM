@@ -38,18 +38,19 @@ and turns that transcript into a full study layer — summary, quiz, final exam,
 chat tutor. Learners browse public courses, enroll, watch, take quizzes, chat with a tutor
 grounded in the actual video, and track their progress.
 
-**The balance is the point:** human curation decides *what* to learn from; AI scales *how*
+**The balance is the point:** human curation decides _what_ to learn from; AI scales _how_
 it's taught.
 
-> 🧭 **Live walkthrough:** the app ships a self‑contained demo at [`/demo`](app/demo) —
-> product overview, a keyboard‑navigable [pitch deck](app/demo/pitch), and a
-> [demo video](app/demo/video).
+> 🧭 **Live walkthrough:** the app ships a self‑contained demo at <a href="https://youtube-lm.vercel.app/demo" target="_blank" rel="noopener noreferrer">demo</a> —
+> product overview, <a href="https://youtube-lm.vercel.app/demo/pitch" target="_blank" rel="noopener noreferrer">pitch deck</a>, and a
+> <a href="https://youtube-lm.vercel.app/demo/video" target="_blank" rel="noopener noreferrer">demo video</a>.
 
 ---
 
 ## 🚀 Features
 
 ### For authors
+
 - 🌳 **Visual course builder** — drag‑and‑drop Units & Chapters (dnd‑kit), reorder and move
   chapters across units.
 - 💾 **Local‑first editing** — changes buffer in the browser with a `localStorage` backup;
@@ -64,6 +65,7 @@ it's taught.
   until **Publish changes**, so live learners never see half‑finished work.
 
 ### For learners
+
 - 🔎 Browse a public catalog of published courses.
 - ▶️ Distraction‑free player (privacy‑friendly `youtube-nocookie` embeds) with prev/next.
 - 📝 Per‑chapter **Summary**, **Quiz**, and **Chat tutor** tabs, plus a final course quiz.
@@ -99,13 +101,13 @@ YouTube URL ──▶ Gemini (transcribe once) ──▶ stored transcript
 
 ## 🛠️ Tech Stack
 
-| Layer        | Choice |
-|--------------|--------|
+| Layer        | Choice                                                                         |
+| ------------ | ------------------------------------------------------------------------------ |
 | Framework    | **Next.js 16** (App Router, Turbopack, `proxy.ts`) · **React 19** · TypeScript |
-| Styling      | **Tailwind CSS v4** · shadcn/ui on **Base UI** primitives (Sera style) |
-| AI           | **Vercel AI SDK** + `@ai-sdk/google` (**Gemini**) |
-| Backend      | **Supabase** — Postgres + Auth (Google OAuth) + Row‑Level Security |
-| Data / state | TanStack Query · Zustand · **Zod** · dnd‑kit |
+| Styling      | **Tailwind CSS v4** · shadcn/ui on **Base UI** primitives (Sera style)         |
+| AI           | **Vercel AI SDK** + `@ai-sdk/google` (**Gemini**)                              |
+| Backend      | **Supabase** — Postgres + Auth (Google OAuth) + Row‑Level Security             |
+| Data / state | TanStack Query · Zustand · **Zod** · dnd‑kit                                   |
 
 ---
 
@@ -116,7 +118,7 @@ app/
 ├─ page.tsx                    # Landing
 ├─ courses/                    # Public catalog + learner view
 ├─ dashboard/                  # My courses, builder (/edit), preview
-├─ demo/                       # Hackathon demo: overview · pitch · video
+├─ demo/                       # Product demo: overview · pitch · video
 ├─ api/chat/                   # Streaming tutor endpoint
 └─ auth/callback/              # Google OAuth callback
 components/
@@ -138,31 +140,36 @@ supabase-script/migrations/    # 0001…0004 SQL migrations
 ## ⚡ Getting Started
 
 ### Prerequisites
+
 - **Node.js 18+**
 - A **Supabase** project (uses the new publishable/secret API keys)
 - A **Google Gemini** API key (free tier works)
 
 ### 1. Install
+
 ```bash
 npm install
 ```
 
 ### 2. Configure environment
+
 Copy the example and fill in your keys:
+
 ```bash
 cp .env.example .env.local
 ```
 
-| Variable | Scope | Purpose |
-|----------|-------|---------|
-| `NEXT_PUBLIC_SUPABASE_URL` | client | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | client | Browser‑safe key (`sb_publishable_…`) |
-| `SUPABASE_SECRET_KEY` | **server only** | Admin key (`sb_secret_…`) — powers the AI pipeline |
-| `GEMINI_API_KEY` | **server only** | Google Gemini key |
+| Variable                               | Scope           | Purpose                                            |
+| -------------------------------------- | --------------- | -------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | client          | Supabase project URL                               |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | client          | Browser‑safe key (`sb_publishable_…`)              |
+| `SUPABASE_SECRET_KEY`                  | **server only** | Admin key (`sb_secret_…`) — powers the AI pipeline |
+| `GEMINI_API_KEY`                       | **server only** | Google Gemini key                                  |
 
 > ⚠️ Never prefix the secret or Gemini key with `NEXT_PUBLIC_` — they must stay server‑side.
 
 ### 3. Set up the database
+
 Run the migrations in order from `supabase-script/migrations/` in the **Supabase SQL editor**:
 
 ```
@@ -172,35 +179,35 @@ Run the migrations in order from `supabase-script/migrations/` in the **Supabase
 0004_final_quiz_status.sql # final-quiz status tracking
 ```
 
-Then enable **Google** as an OAuth provider in Supabase Auth. See [`SETUP.md`](SETUP.md)
-for the detailed walkthrough.
+Then enable **Google** as an OAuth provider in Supabase Auth. See <a href="https://supabase.com/docs/guides/auth/social-login/auth-google" target="_blank" rel="noopener noreferrer">setup</a> for the detailed walkthrough.
 
 ### 4. Run
+
 ```bash
 npm run dev
 ```
+
 Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
 ## 📜 Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev`   | Start the dev server |
-| `npm run build` | Production build |
+| Command         | Description                |
+| --------------- | -------------------------- |
+| `npm run dev`   | Start the dev server       |
+| `npm run build` | Production build           |
 | `npm run start` | Serve the production build |
-| `npm run lint`  | Run ESLint |
+| `npm run lint`  | Run ESLint                 |
 
 ---
 
-## 🗺️ Roadmap
+## 🗺️ So far What's Done
 
 - ✅ **Phase 1** — Setup, schema + RLS, Google auth
 - ✅ **Phase 2** — Course building, browsing, enrollment, progress
 - ✅ **Phase 2.5** — Local‑first builder + snapshot publishing
 - ✅ **Phase 3** — AI summaries, quizzes, final exam, grounded chat tutor
-- 🔜 Certificates · cohorts · multi‑language transcripts · recommendations
 
 ---
 
