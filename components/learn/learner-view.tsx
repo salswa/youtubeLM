@@ -4,7 +4,14 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Play, CircleCheck, Circle, Trophy } from "lucide-react";
+import {
+  Check,
+  Play,
+  CircleCheck,
+  Circle,
+  Trophy,
+  Lock as LockIcon,
+} from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +57,10 @@ export function LearnerView({
   const total = flat.length;
   const doneCount = flat.filter((c) => completed.has(c.id)).length;
   const pct = total ? Math.round((doneCount / total) * 100) : 0;
+
+  // Summary / Quiz / Chat are for enrolled learners only. The author's own
+  // preview stays unlocked so they can review before publishing.
+  const locked = !enrolled && !preview;
 
   function handleEnroll() {
     startTransition(async () => {
@@ -178,7 +189,16 @@ export function LearnerView({
                 course.
               </p>
               <div className="mt-6">
-                <QuizRunner quiz={course.final_quiz} isAuthed={isAuthed} />
+                {locked ? (
+                  <LockGate
+                    noun="final course quiz"
+                    isAuthed={isAuthed}
+                    onEnroll={handleEnroll}
+                    pending={pending}
+                  />
+                ) : (
+                  <QuizRunner quiz={course.final_quiz} isAuthed={isAuthed} />
+                )}
               </div>
             </>
           ) : !active ? (
@@ -250,7 +270,14 @@ export function LearnerView({
                 </TabsList>
 
                 <TabsContent value="summary" className="pt-4">
-                  {active.summary ? (
+                  {locked ? (
+                    <LockGate
+                      noun="chapter summary"
+                      isAuthed={isAuthed}
+                      onEnroll={handleEnroll}
+                      pending={pending}
+                    />
+                  ) : active.summary ? (
                     <div>
                       {/* <Badge
                         variant={
@@ -274,7 +301,14 @@ export function LearnerView({
                 </TabsContent>
 
                 <TabsContent value="quiz" className="pt-4">
-                  {active.quiz && active.quiz.questions.length > 0 ? (
+                  {locked ? (
+                    <LockGate
+                      noun="chapter quiz"
+                      isAuthed={isAuthed}
+                      onEnroll={handleEnroll}
+                      pending={pending}
+                    />
+                  ) : active.quiz && active.quiz.questions.length > 0 ? (
                     <QuizRunner quiz={active.quiz} isAuthed={isAuthed} />
                   ) : (
                     <EmptyAi label="No quiz yet for this chapter." />
@@ -282,7 +316,16 @@ export function LearnerView({
                 </TabsContent>
 
                 <TabsContent value="chat" className="pt-4">
-                  <ChatPanel chapterId={active.id} isAuthed={isAuthed} />
+                  {locked ? (
+                    <LockGate
+                      noun="chat tutor"
+                      isAuthed={isAuthed}
+                      onEnroll={handleEnroll}
+                      pending={pending}
+                    />
+                  ) : (
+                    <ChatPanel chapterId={active.id} isAuthed={isAuthed} />
+                  )}
                 </TabsContent>
 
                 <TabsContent value="about" className="pt-4">
@@ -309,6 +352,39 @@ function EmptyAi({ label }: { label: string }) {
   return (
     <div className="border border-dashed p-8 text-center text-sm text-muted-foreground">
       {label}
+    </div>
+  );
+}
+
+/** Shown in place of Summary/Quiz/Chat for visitors who aren't enrolled. */
+function LockGate({
+  noun,
+  isAuthed,
+  onEnroll,
+  pending,
+}: {
+  noun: string;
+  isAuthed: boolean;
+  onEnroll: () => void;
+  pending: boolean;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3 border border-dashed p-10 text-center">
+      <LockIcon className="size-6 text-muted-foreground/60" />
+      <p className="max-w-sm text-sm text-muted-foreground">
+        {isAuthed
+          ? `Enroll in this course to unlock the ${noun}.`
+          : `Sign in and enroll to unlock the ${noun}.`}
+      </p>
+      {isAuthed ? (
+        <Button size="sm" onClick={onEnroll} disabled={pending}>
+          Enroll to unlock
+        </Button>
+      ) : (
+        <Link href="/login" className={buttonVariants({ size: "sm" })}>
+          Enroll to view
+        </Link>
+      )}
     </div>
   );
 }
