@@ -16,6 +16,17 @@ export function extractYoutubeId(url: string): string | null {
   return null;
 }
 
+/**
+ * Canonical single-video watch URL built from the extracted id, e.g.
+ * `https://www.youtube.com/watch?v=ID`. Returns null if the input isn't a valid
+ * YouTube video URL. Storing this (instead of the raw pasted URL) strips
+ * playlist/index params that break Gemini's URL ingestion.
+ */
+export function canonicalYoutubeUrl(url: string): string | null {
+  const id = extractYoutubeId(url);
+  return id ? `https://www.youtube.com/watch?v=${id}` : null;
+}
+
 export const youtubeUrlSchema = z
   .string()
   .trim()
