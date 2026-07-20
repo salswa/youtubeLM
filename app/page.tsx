@@ -12,16 +12,16 @@ export default function HomePage() {
           <Badge variant="secondary" className="mb-6 uppercase tracking-wide">
             Turn YouTube into structured courses
           </Badge>
-          <h1 className="max-w-3xl font-heading text-5xl leading-tight tracking-tight">
+          <h1 className="max-w-4xl font-heading text-5xl leading-tight tracking-tight ">
             Learn anything, the smart way — powered by the best videos on
             YouTube
           </h1>
-          <p className="mt-6 max-w-xl text-lg text-muted-foreground">
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-pretty text-muted-foreground">
             Build courses from hand-picked YouTube videos. Get AI-generated
             summaries, quizzes, and a tutor you can chat with — for every
             chapter.
           </p>
-          <div className="mt-8 flex gap-3">
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
             <Link href="/courses" className={buttonVariants({ size: "lg" })}>
               Explore courses
             </Link>
@@ -32,7 +32,7 @@ export default function HomePage() {
               Create a course →
             </Link>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">
+          <p className="mt-6 text-xs text-muted-foreground">
             Build in Minutes · Free · Create up to 3 courses
           </p>
         </section>
