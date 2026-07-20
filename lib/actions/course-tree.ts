@@ -3,7 +3,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { extractYoutubeId, courseSchema } from "@/lib/schemas/course";
+import {
+  extractYoutubeId,
+  canonicalYoutubeUrl,
+  courseSchema,
+} from "@/lib/schemas/course";
 import { getCourseTree } from "@/lib/data/courses";
 import { getAuthorAiContent, type AuthorAiContent } from "@/lib/data/ai";
 import type { CourseTree, PublishedTree, PublishedQuiz } from "@/lib/types";
@@ -94,12 +98,17 @@ export async function saveCourseTree(
   const chapterRows = input.units.flatMap((u) =>
     u.chapters.map((c, j) => {
       const videoId = c.youtube_url ? extractYoutubeId(c.youtube_url) : null;
+      // Persist the canonical watch URL, never the raw pasted one — strips
+      // playlist/index params that break Gemini's URL ingestion.
+      const cleanUrl = c.youtube_url
+        ? canonicalYoutubeUrl(c.youtube_url)
+        : null;
       return {
         id: c.id,
         unit_id: u.id,
         title: c.title,
         description: c.description ?? "",
-        youtube_url: c.youtube_url || null,
+        youtube_url: cleanUrl,
         youtube_video_id: videoId,
         position: j,
       };

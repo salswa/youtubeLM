@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import { signOut } from "@/lib/actions/auth";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export async function SiteNav() {
   const user = await getUser();
@@ -19,21 +20,24 @@ export async function SiteNav() {
           YouTubeLM
         </Link>
 
-        <nav className="flex items-center gap-5 text-sm">
+        <nav className="flex items-center gap-4 text-sm">
           <Link
             href="/courses"
             className="text-muted-foreground transition-colors hover:text-foreground"
           >
             Browse
           </Link>
+          {user && (
+            <Link
+              href="/dashboard"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Dashboard
+            </Link>
+          )}
+          <ThemeToggle />
           {user ? (
             <>
-              <Link
-                href="/dashboard"
-                className="text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Dashboard
-              </Link>
               <span className="hidden text-muted-foreground sm:inline">
                 {user.email}
               </span>

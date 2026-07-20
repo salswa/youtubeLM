@@ -43,7 +43,7 @@ import {
 } from "@/lib/actions/ai";
 import { FinalQuizDialog } from "@/components/builder/final-quiz-dialog";
 import { AiStatusIcon } from "@/components/builder/ai-status-icon";
-import { extractYoutubeId } from "@/lib/schemas/course";
+import { extractYoutubeId, canonicalYoutubeUrl } from "@/lib/schemas/course";
 import type {
   CourseTree,
   UnitWithChapters,
@@ -341,10 +341,18 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
   }
 
   function handleChapterVideo(id: string, url: string) {
-    const videoId = url.trim() ? extractYoutubeId(url.trim()) : null;
-    if (url.trim() && !videoId) {
-      toast.error("That doesn't look like a valid YouTube URL.");
+    const trimmed = url.trim();
+    const videoId = trimmed ? extractYoutubeId(trimmed) : null;
+    // Reject anything that isn't a valid YouTube video URL — don't store it.
+    if (trimmed && !videoId) {
+      toast.error(
+        "Enter a valid YouTube video URL (e.g. youtube.com/watch?v=…).",
+      );
+      return;
     }
+    // Store our own canonical watch URL, not the pasted one. This drops
+    // playlist/index params (…&list=…&index=…) that break Gemini's ingestion.
+    const canonicalUrl = trimmed ? canonicalYoutubeUrl(trimmed) : null;
     commit(
       unitsRef.current.map((u) => ({
         ...u,
@@ -352,7 +360,7 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
           c.id === id
             ? {
                 ...c,
-                youtube_url: url.trim() || null,
+                youtube_url: canonicalUrl,
                 youtube_video_id: videoId,
               }
             : c,
@@ -611,7 +619,7 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
               <Plus className="size-4" /> Add unit
             </Button>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-muted-foreground">
             Drag to reorder units and chapters. Changes are kept locally until
             you click <strong>Save</strong>.
           </p>
@@ -647,7 +655,7 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
           </DndContext>
 
           {units.length === 0 && (
-            <div className="mt-4 border border-dashed p-10 text-center text-sm text-muted-foreground">
+            <div className="mt-4 border border-dashed bg-muted/30 p-10 text-center text-sm text-muted-foreground">
               No units yet. Add your first unit to get started.
             </div>
           )}
