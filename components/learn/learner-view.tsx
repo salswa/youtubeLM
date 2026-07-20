@@ -107,7 +107,8 @@ export function LearnerView({
         <Button
           onClick={() => router.back()}
           variant="ghost"
-          className="text-xs text-muted-foreground hover:text-foreground"
+          size="sm"
+          className="-ml-2 text-xs text-muted-foreground hover:text-foreground"
         >
           ← Back
         </Button>
@@ -135,7 +136,7 @@ export function LearnerView({
                     <li key={ch.id}>
                       <button
                         onClick={() => setView(ch.id)}
-                        className={`flex w-full items-center gap-2 px-2 py-2 text-left text-sm transition-colors ${
+                        className={`flex w-full items-center gap-2 px-2 py-2 text-left text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
                           isActive
                             ? "bg-primary/10 font-medium text-primary"
                             : "hover:bg-muted"
@@ -158,7 +159,7 @@ export function LearnerView({
           {course.final_quiz && (
             <button
               onClick={() => setView("final")}
-              className={`flex w-full items-center gap-2 px-2 py-2 text-left text-sm font-medium transition-colors ${
+              className={`flex w-full items-center gap-2 px-2 py-2 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
                 view === "final"
                   ? "bg-primary/10 text-primary"
                   : "text-primary hover:bg-muted"
@@ -174,7 +175,7 @@ export function LearnerView({
       <main className="overflow-y-auto">
         <div className="mx-auto max-w-3xl px-6 py-6">
           {preview && (
-            <div className="mb-4 flex items-center gap-2 border border-dashed p-3 text-sm text-muted-foreground">
+            <div className="mb-4 flex items-center gap-2 border border-dashed bg-muted/30 p-3 text-sm text-muted-foreground">
               <Badge variant="secondary">Preview</Badge>
               You&apos;re viewing the unpublished draft. Learners see the last
               published version.
@@ -202,7 +203,7 @@ export function LearnerView({
               </div>
             </>
           ) : !active ? (
-            <div className="border border-dashed p-12 text-center text-muted-foreground">
+            <div className="border border-dashed bg-muted/30 p-12 text-center text-muted-foreground">
               This course has no chapters yet.
             </div>
           ) : (
@@ -350,7 +351,7 @@ export function LearnerView({
 
 function EmptyAi({ label }: { label: string }) {
   return (
-    <div className="border border-dashed p-8 text-center text-sm text-muted-foreground">
+    <div className="border border-dashed bg-muted/30 p-8 text-center text-sm text-muted-foreground">
       {label}
     </div>
   );
@@ -369,7 +370,7 @@ function LockGate({
   pending: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 border border-dashed p-10 text-center">
+    <div className="flex flex-col items-center gap-3 border border-dashed bg-muted/30 p-10 text-center">
       <LockIcon className="size-6 text-muted-foreground/60" />
       <p className="max-w-sm text-sm text-muted-foreground">
         {isAuthed

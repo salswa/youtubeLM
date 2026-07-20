@@ -611,7 +611,7 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
               <Plus className="size-4" /> Add unit
             </Button>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-muted-foreground">
             Drag to reorder units and chapters. Changes are kept locally until
             you click <strong>Save</strong>.
           </p>
@@ -647,7 +647,7 @@ export function CourseBuilder({ course }: { course: CourseTree }) {
           </DndContext>
 
           {units.length === 0 && (
-            <div className="mt-4 border border-dashed p-10 text-center text-sm text-muted-foreground">
+            <div className="mt-4 border border-dashed bg-muted/30 p-10 text-center text-sm text-muted-foreground">
               No units yet. Add your first unit to get started.
             </div>
           )}

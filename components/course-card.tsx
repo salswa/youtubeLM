@@ -15,8 +15,11 @@ export function CourseCard({
   href: string;
 }) {
   return (
-    <Link href={href} className="group">
-      <Card className="h-full gap-0 overflow-hidden py-0 transition-shadow hover:shadow-lg">
+    <Link
+      href={href}
+      className="group rounded-none outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Card className="h-full gap-0 overflow-hidden py-0 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
         <div className="grid aspect-video place-items-center bg-gradient-to-br from-primary/15 to-primary/5 font-heading text-4xl text-primary">
           {course.cover_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -36,7 +39,9 @@ export function CourseCard({
             )}
             <Badge variant="outline">{course.chapter_count} chapters</Badge>
           </div>
-          <h3 className="font-heading text-lg leading-tight">{course.title}</h3>
+          <h3 className="line-clamp-2 font-heading text-lg leading-tight">
+            {course.title}
+          </h3>
           {course.description && (
             <p className="line-clamp-2 text-sm text-muted-foreground">
               {course.description}

@@ -40,7 +40,7 @@ export default async function DashboardPage() {
             <h1 className="font-heading text-3xl tracking-tight">
               Welcome back, {displayName} 👋
             </h1>
-            <p className="mt-1 text-muted-foreground">
+            <p className="mt-2 text-muted-foreground">
               Pick up where you left off, or build something new.
             </p>
           </div>
@@ -77,7 +77,7 @@ export default async function DashboardPage() {
                     <Link
                       key={c.id}
                       href={`/courses/${c.id}`}
-                      className="flex items-center gap-4 p-4 transition-colors hover:bg-muted/50"
+                      className="flex items-center gap-4 p-4 transition-colors outline-none hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                     >
                       <div className="grid size-12 shrink-0 place-items-center rounded-none bg-primary/10 font-heading text-lg text-primary">
                         {c.title.charAt(0).toUpperCase()}
@@ -129,7 +129,7 @@ export default async function DashboardPage() {
                         </Badge>
                         {c.status === "published" &&
                           c.has_unpublished_changes && (
-                            <span className="text-[11px] text-amber-600">
+                            <span className="text-[11px] text-amber-600 dark:text-amber-500">
                               unpublished changes
                             </span>
                           )}
@@ -187,12 +187,14 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardTitle className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
           {label}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="font-heading text-3xl">{value}</p>
+        <p className="font-heading text-3xl tracking-tight tabular-nums">
+          {value}
+        </p>
       </CardContent>
     </Card>
   );

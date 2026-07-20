@@ -111,7 +111,7 @@ export function UnitCard({
       <button
         type="button"
         onClick={() => onAddChapter(unit.id)}
-        className="flex w-full items-center gap-2 border-t p-3 text-sm font-medium text-primary hover:bg-primary/5"
+        className="flex w-full items-center gap-2 border-t p-3 text-sm font-medium text-primary outline-none hover:bg-primary/5 focus-visible:bg-primary/5 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <Plus className="size-4" /> Add chapter
       </button>

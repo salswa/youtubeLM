@@ -12,12 +12,12 @@ export default async function CoursesPage() {
       <SiteNav />
       <main className="mx-auto max-w-6xl px-6 py-10">
         <h1 className="font-heading text-3xl tracking-tight">Browse courses</h1>
-        <p className="mt-1 text-muted-foreground">
+        <p className="mt-2 max-w-xl text-muted-foreground">
           Public courses built by the community — enroll and start learning.
         </p>
 
         {courses.length === 0 ? (
-          <div className="mt-16 rounded-none border border-dashed p-12 text-center text-muted-foreground">
+          <div className="mt-10 grid place-items-center rounded-none border border-dashed bg-muted/30 px-6 py-16 text-center text-sm text-muted-foreground">
             No published courses yet. Be the first to create one!
           </div>
         ) : (
